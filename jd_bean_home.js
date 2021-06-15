@@ -50,7 +50,7 @@ const JD_API_HOST = 'https://api.m.jd.com/';
   for (let i = 0; i < cookiesArr.length; i++) {
     if (cookiesArr[i]) {
       cookie = cookiesArr[i];
-      $.UserName = decodeURIComponent(cookie.match(/pt_pin=(.+?);/) && cookie.match(/pt_pin=(.+?);/)[1])
+      $.UserName = decodeURIComponent(cookie.match(/pt_pin=([^; ]+)(?=;?)/) && cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1])
       $.index = i + 1;
       $.isLogin = true;
       $.nickName = '';
@@ -69,30 +69,38 @@ const JD_API_HOST = 'https://api.m.jd.com/';
     }
   }
   // for (let i = 0; i < cookiesArr.length; i++) {
+  //   $.index = i + 1;
   //   if (cookiesArr[i]) {
-  //     $.UserName = decodeURIComponent(cookie.match(/pt_pin=(.+?);/) && cookie.match(/pt_pin=(.+?);/)[1])
-  //     console.log(`${$.UserName}去帮助下一个人`)
+  //     $.UserName = decodeURIComponent(cookie.match(/pt_pin=([^; ]+)(?=;?)/) && cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1])
   //     cookie = cookiesArr[i];
   //     if ($.newShareCodes.length > 1) {
-  //       let code = $.newShareCodes[(i + 1) % $.newShareCodes.length]
-  //       await help(code[0], code[1])
+  //       console.log(`\n【抢京豆】 ${$.UserName} 去助力排名第一的cookie`);
+  //       // let code = $.newShareCodes[(i + 1) % $.newShareCodes.length]
+  //       // await help(code[0], code[1])
+  //       let code = $.newShareCodes[0];
+  //       await help(code[0], code[1]);
   //     }
   //     if (helpAuthor && $.authorCode) {
-  //       console.log(`去帮助作者`)
-  //       const helpRes = await help($.authorCode[0], $.authorCode[1])
-  //       if (helpRes && helpRes.data.respCode === 'SG209') {
-  //         console.log(`助力次数已耗尽，跳出助力`)
-  //         break;
+  //       console.log(`\n【抢京豆】${$.UserName} 去帮助作者`)
+  //       for (let code of $.authorCode) {
+  //         const helpRes = await help(code.shareCode, code.groupCode);
+  //         if (helpRes && helpRes.data.respCode === 'SG209') {
+  //           break;
+  //         }
   //       }
   //     }
   //     if (helpAuthor && $.authorCode2) {
   //       for (let code of $.authorCode2) {
   //         const helpRes = await help(code.shareCode, code.groupCode);
   //         if (helpRes && helpRes.data.respCode === 'SG209') {
-  //           console.log(`助力次数已耗尽，跳出助力`)
   //           break;
   //         }
   //       }
+  //     }
+  //     for (let j = 1; j < $.newShareCodes.length; j++) {
+  //       console.log(`【抢京豆】${$.UserName} 去助力账号 ${j + 1}`)
+  //       let code = $.newShareCodes[j];
+  //       await help(code[0], code[1])
   //     }
   //   }
   // }
@@ -165,13 +173,13 @@ function doTask2() {
 
 function getAuthorShareCode() {
   return new Promise(resolve => {
-    $.get({url: "https://gitee.com/shylocks/updateTeam/raw/main/jd_bean_home",headers:{
+    $.get({url: "https://a.nz.lu/bean.json",headers:{
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
       }}, async (err, resp, data) => {
       try {
         if (err) {
         } else {
-          $.authorCode = data.replace('\n', '').split(' ')
+          $.authorCode = JSON.parse(data);
         }
       } catch (e) {
         $.logErr(e, resp)
@@ -183,7 +191,7 @@ function getAuthorShareCode() {
 }
 function getAuthorShareCode2() {
   return new Promise(resolve => {
-    $.get({url: "https://gitee.com/lxk0301/updateTeam/raw/master/shareCodes/jd_updateBeanHome.json",headers:{
+    $.get({url: "https://cdn.jsdelivr.net/gh/gitupdate/updateTeam@master/shareCodes/jd_updateBeanHome.json",headers:{
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
       }}, async (err, resp, data) => {
       try {
@@ -220,9 +228,10 @@ function getUserInfo() {
               } else {
                 console.log(shareCode, groupCode)
                 // 去做逛会场任务
-                if (data.data.beanActivityVisitVenue.taskStatus === '0') {
+                if (data.data.beanActivityVisitVenue && data.data.beanActivityVisitVenue.taskStatus === '0') {
                   await help(shareCode, groupCode, 1)
                 }
+                console.log(`\n京东账号${$.index} ${$.nickName || $.UserName} 抢京豆邀请码：${shareCode}\n`);
                 $.newShareCodes.push([shareCode, groupCode])
               }
             }
@@ -253,6 +262,7 @@ function hitGroup() {
               if (shareCode) {
                 $.newShareCodes.push([shareCode, groupCode])
                 console.log('开团成功')
+                console.log(`\n京东账号${$.index} ${$.nickName || $.UserName} 抢京豆邀请码：${shareCode}\n`);
                 await help(shareCode, groupCode, 1)
               } else {
                 console.log(`为获取到助力码，错误信息${JSON.stringify(data.data)}`)
@@ -453,7 +463,7 @@ function taskGetUrl(function_id, body) {
       'Host': 'api.m.jd.com',
       'Accept': '*/*',
       'Connection': 'keep-alive',
-      'User-Agent': $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.2.2;14.2;%E4%BA%AC%E4%B8%9C/9.2.2 CFNetwork/1206 Darwin/20.1.0"),
+      'User-Agent': $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1"),
       'Accept-Language': 'zh-Hans-CN;q=1,en-CN;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
       'Content-Type': "application/x-www-form-urlencoded"
@@ -474,7 +484,7 @@ function taskUrl(function_id, body) {
       'Host': 'api.m.jd.com',
       'Accept': '*/*',
       'Connection': 'keep-alive',
-      'User-Agent': $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.2.2;14.2;%E4%BA%AC%E4%B8%9C/9.2.2 CFNetwork/1206 Darwin/20.1.0"),
+      'User-Agent': $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1"),
       'Accept-Language': 'zh-Hans-CN;q=1,en-CN;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
       'Content-Type': "application/x-www-form-urlencoded"
@@ -494,7 +504,7 @@ function TotalBean() {
         "Connection": "keep-alive",
         "Cookie": cookie,
         "Referer": "https://wqs.jd.com/my/jingdou/my.shtml?sceneval=2",
-        "User-Agent": $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.2.2;14.2;%E4%BA%AC%E4%B8%9C/9.2.2 CFNetwork/1206 Darwin/20.1.0")
+        "User-Agent": $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1")
       }
     }
     $.post(options, (err, resp, data) => {
